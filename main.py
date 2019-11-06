@@ -9,7 +9,13 @@ from tensorflow.keras import optimizers
 import tensorflow.keras.backend as K
 import numpy as np
 from tensorflow.python.keras.callbacks import ModelCheckpoint
+
 import os
+import wget
+from zipfile import ZipFile
+from os import listdir
+
+from scipy import spatial
 
 NUM_CLASSES = 6
 IMAGE_RESIZE = 224
@@ -18,8 +24,8 @@ NUM_EPOCHS = 100
 
 LOSS_METRICS = ['accuracy']
 
+data_url = "http://aws-proserve-data-science.s3.amazonaws.com/geological_similarity.zip"
 
-# http://aws-proserve-data-science.s3.amazonaws.com/geological_similarity.zip
 
 class ImageSimilarity:
     def __init__(self):
@@ -28,9 +34,20 @@ class ImageSimilarity:
         self.validation_generator = None
         self.trained_weights_path = './working/best.hdf5'
         self.image_data_path = './geological_similarity'
+        self.inverted_index = {}
+
+        if not os.path.exists('./working'):
+            os.mkdir('./working')
 
     def download_file(self):
-        pass
+        if os.path.exists(self.image_data_path):
+            return
+
+        wget.download(data_url, "./")
+        with ZipFile("geological_similarity.zip", 'r') as zip:
+            zip.extractall()
+
+        os.remove("geological_similarity.zip")
 
     def build_model(self):
         model = Sequential()
@@ -84,32 +101,50 @@ class ImageSimilarity:
 
         model.load_weights(self.trained_weights_path)
 
-    def get_vec(self, image_path):
+    def get_all_vec(self):
+        if not os.path.exists(self.image_data_path):
+            raise Exception("Invalid Operation", f"{self.image_data_path} does not exists")
+
         model = self.build_model()
 
         if os.path.exists(self.trained_weights_path):
             model.load_weights(self.trained_weights_path)
+
+        intermediate_layer_model = Model(inputs=model.inputs, outputs=model.layers[1].output)
+
+        self.inverted_index = {}
+
+        classes = [f for f in listdir(self.image_data_path) if not f.startswith('.')]
+        for elem in classes:
+            path = os.path.join(self.image_data_path, elem)
+            images = [f for f in listdir(path) if ".jpg" in f]
+            # print(images)
+            for image in images:
+                image_path = os.path.join(path, image)
+                self.inverted_index[image_path] = self.get_vec(image_path, intermediate_layer_model)
+                print(image_path, " ", self.inverted_index[image_path])
+
+    def get_vec(self, image_path, model):
 
         img = image.load_img(image_path, target_size=(IMAGE_RESIZE, IMAGE_RESIZE))
         x = image.img_to_array(img)
         x = np.expand_dims(x, axis=0)
         x = preprocess_input(x)
 
-        print(x.shape)
-        self.intermediate_layer_model = Model(inputs=model.inputs,
-                                              outputs=model.layers[1].output)
-        intermediate_output = self.intermediate_layer_model.predict(x)
-
-        print(intermediate_output[0])
+        intermediate_output = model.predict(x)
+        return intermediate_output[0]
 
 
 def main():
     imageSimilarity = ImageSimilarity()
+    imageSimilarity.download_file()
 
     # imageSimilarity.data_prepare()
     # imageSimilarity.train()
 
-    imageSimilarity.get_vec('./geological_similarity/andesite/0FVDN.jpg')
+    imageSimilarity.get_all_vec()
+
+    # imageSimilarity.get_vec('./geological_similarity/andesite/0FVDN.jpg')
 
 
 if __name__ == '__main__':
