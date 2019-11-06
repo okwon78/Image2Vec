@@ -9,12 +9,12 @@ from tensorflow.keras import optimizers
 import tensorflow.keras.backend as K
 import numpy as np
 from tensorflow.python.keras.callbacks import ModelCheckpoint
-
+import os
 
 NUM_CLASSES = 6
 IMAGE_RESIZE = 224
 
-NUM_EPOCHS = 1000
+NUM_EPOCHS = 100
 
 LOSS_METRICS = ['accuracy']
 
@@ -26,6 +26,7 @@ class ImageSimilarity:
         self.train_generator = None
         self.validation_generator = None
         self.trained_weights_path = './working/best.hdf5'
+        self.image_data_path = './geological_similarity'
 
     def download_file(self):
         pass
@@ -49,19 +50,24 @@ class ImageSimilarity:
         data_generator = ImageDataGenerator(preprocessing_function=preprocess_input)
 
         self.train_generator = data_generator.flow_from_directory(
-            './geological_similarity',
+            self.image_data_path,
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
+            shuffle=True,
             batch_size=100,
             class_mode='categorical')
 
         self.validation_generator = data_generator.flow_from_directory(
-            './geological_similarity',
+            self.image_data_path,
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
-            batch_size=100,
+            batch_size=1,
             class_mode='categorical')
 
     def train(self):
         model = self.build_model()
+
+        if os.path.exists(self.trained_weights_path):
+            model.load_weights(self.trained_weights_path)
+
         cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path, monitor='val_loss', save_best_only=True,
                                           mode='auto')
 
@@ -70,7 +76,7 @@ class ImageSimilarity:
             steps_per_epoch=30,
             epochs=NUM_EPOCHS,
             validation_data=self.validation_generator,
-            validation_steps=10,
+            validation_steps=3000,
             callbacks=[cb_checkpointer]
         )
 
