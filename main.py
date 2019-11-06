@@ -1,4 +1,4 @@
-from tensorflow_core.python.keras.models import Sequential
+from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.applications import ResNet50
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing import image
