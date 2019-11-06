@@ -18,6 +18,7 @@ NUM_EPOCHS = 100
 
 LOSS_METRICS = ['accuracy']
 
+
 # http://aws-proserve-data-science.s3.amazonaws.com/geological_similarity.zip
 
 class ImageSimilarity:
@@ -59,6 +60,7 @@ class ImageSimilarity:
         self.validation_generator = data_generator.flow_from_directory(
             self.image_data_path,
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
+            shuffle=True,
             batch_size=1,
             class_mode='categorical')
 
@@ -84,28 +86,30 @@ class ImageSimilarity:
 
     def get_vec(self, image_path):
         model = self.build_model()
-        model.load_weights(self.trained_weights_path)
+
+        if os.path.exists(self.trained_weights_path):
+            model.load_weights(self.trained_weights_path)
+
         img = image.load_img(image_path, target_size=(IMAGE_RESIZE, IMAGE_RESIZE))
         x = image.img_to_array(img)
         x = np.expand_dims(x, axis=0)
-        x = ResNet50.preprocess_input(x)
+        x = preprocess_input(x)
 
-        # self.intermediate_layer_model = Model(inputs=model.layers[0].input,
-        #                                       outputs=model.layers[1].output)
-        # intermediate_output = self.intermediate_layer_model.predict(x)
-
-        layer_output = K.function([model.layers[0].input], [model.layers[1].output])
-        intermediate_output = layer_output([x])[0][0]
+        print(x.shape)
+        self.intermediate_layer_model = Model(inputs=model.inputs,
+                                              outputs=model.layers[1].output)
+        intermediate_output = self.intermediate_layer_model.predict(x)
 
         print(intermediate_output[0])
 
 
 def main():
     imageSimilarity = ImageSimilarity()
-    imageSimilarity.data_prepare()
-    imageSimilarity.train()
 
-    # imageSimilarity.get_vec('./geological_similarity/andesite/0FVDN.jpg')
+    # imageSimilarity.data_prepare()
+    # imageSimilarity.train()
+
+    imageSimilarity.get_vec('./geological_similarity/andesite/0FVDN.jpg')
 
 
 if __name__ == '__main__':
