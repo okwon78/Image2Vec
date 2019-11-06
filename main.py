@@ -51,13 +51,13 @@ class ImageSimilarity:
         self.train_generator = data_generator.flow_from_directory(
             './geological_similarity',
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
-            batch_size=10,
+            batch_size=100,
             class_mode='categorical')
 
         self.validation_generator = data_generator.flow_from_directory(
             './geological_similarity',
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
-            batch_size=10,
+            batch_size=100,
             class_mode='categorical')
 
     def train(self):
@@ -70,7 +70,7 @@ class ImageSimilarity:
             steps_per_epoch=30,
             epochs=NUM_EPOCHS,
             validation_data=self.validation_generator,
-            validation_steps=30,
+            validation_steps=10,
             callbacks=[cb_checkpointer]
         )
 
