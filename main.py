@@ -12,7 +12,7 @@ from tensorflow.python.keras.callbacks import ModelCheckpoint
 
 
 NUM_CLASSES = 6
-IMAGE_RESIZE = 28
+IMAGE_RESIZE = 224
 
 NUM_EPOCHS = 1000
 
@@ -25,7 +25,6 @@ class ImageSimilarity:
         self.intermediate_layer_model = None
         self.train_generator = None
         self.validation_generator = None
-        self.resnet_weights_path = './weights/resnet50_weights_tf_dim_ordering_tf_kernels_notop.h5'
         self.trained_weights_path = './working/best.hdf5'
 
     def download_file(self):
@@ -33,14 +32,15 @@ class ImageSimilarity:
 
     def build_model(self):
         model = Sequential()
-        resnet = ResNet50(include_top=False, weights='imagenet')
+        resnet = ResNet50(include_top=False, pooling='avg', weights='imagenet')
         # resnet.summary()
         model.add(resnet)
+        model.add(Dense(32, activation='relu', name="embedding"))
         model.add(Dense(NUM_CLASSES, activation='softmax'))
-
+        model.layers[0].trainable = False
         model.summary()
 
-        sgd = optimizers.SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+        sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
         model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 
         return model
@@ -51,13 +51,13 @@ class ImageSimilarity:
         self.train_generator = data_generator.flow_from_directory(
             './geological_similarity',
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
-            batch_size=20,
+            batch_size=10,
             class_mode='categorical')
 
         self.validation_generator = data_generator.flow_from_directory(
             './geological_similarity',
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
-            batch_size=20,
+            batch_size=10,
             class_mode='categorical')
 
     def train(self):
