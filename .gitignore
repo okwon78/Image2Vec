@@ -135,3 +135,7 @@ dmypy.json
 *.jpg
 
 *.zip
+
+geological_similarity/
+working/
+__MACOSX/

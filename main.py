@@ -11,7 +11,8 @@ import numpy as np
 from tensorflow.python.keras.callbacks import ModelCheckpoint
 
 import os
-import wget
+import requests
+
 from zipfile import ZipFile
 from os import listdir
 
@@ -34,6 +35,7 @@ class ImageSimilarity:
         self.validation_generator = None
         self.trained_weights_path = './working/best.hdf5'
         self.image_data_path = './geological_similarity'
+        self.zipfile_name = "./geological_similarity.zip"
         self.inverted_index = {}
 
         if not os.path.exists('./working'):
@@ -42,12 +44,14 @@ class ImageSimilarity:
     def download_file(self):
         if os.path.exists(self.image_data_path):
             return
+        r = requests.get(data_url, allow_redirects=True)
+        with open(self.zipfile_name, 'wb') as f:
+            f.write(r.content)
 
-        wget.download(data_url, "./")
-        with ZipFile("geological_similarity.zip", 'r') as zip:
-            zip.extractall()
+        with ZipFile(self.zipfile_name, 'r') as f:
+            f.extractall()
 
-        os.remove("geological_similarity.zip")
+        os.remove(self.zipfile_name)
 
     def build_model(self):
         model = Sequential()
@@ -64,7 +68,7 @@ class ImageSimilarity:
 
         return model
 
-    def data_prepare(self):
+    def __data_prepare(self):
         data_generator = ImageDataGenerator(preprocessing_function=preprocess_input)
 
         self.train_generator = data_generator.flow_from_directory(
@@ -86,6 +90,8 @@ class ImageSimilarity:
 
         if os.path.exists(self.trained_weights_path):
             model.load_weights(self.trained_weights_path)
+
+        self.__data_prepare()
 
         cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path, monitor='val_loss', save_best_only=True,
                                           mode='auto')
@@ -137,10 +143,9 @@ class ImageSimilarity:
 
 def main():
     imageSimilarity = ImageSimilarity()
-    imageSimilarity.download_file()
 
-    # imageSimilarity.data_prepare()
-    # imageSimilarity.train()
+    imageSimilarity.download_file()
+    imageSimilarity.train()
 
     imageSimilarity.get_all_vec()
 
