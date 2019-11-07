@@ -20,6 +20,7 @@ from os import listdir
 
 from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 NUM_CLASSES = 6
 IMAGE_RESIZE = 224
@@ -43,6 +44,7 @@ class ImageSimilarity:
         self.inverted_index_file = "./inverted_index.json"
         self.inverted_index = {}
         self.image_embedding = {}
+        self.inverted_index = None
 
         if not os.path.exists('./working'):
             os.mkdir('./working')
@@ -155,7 +157,7 @@ class ImageSimilarity:
 
         similarities = {}
         self.inverted_index = {}
-
+        count = 0
         for key in tqdm(self.image_embedding.keys()):
             embedding = self.image_embedding[key]
             for target in self.image_embedding.keys():
@@ -168,6 +170,11 @@ class ImageSimilarity:
                 similarities[target] = cosine_similarity(embedding, target_embedding)[0][0]
 
             self.inverted_index[key] = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[0:top_k]
+
+            if count > 10:
+                break
+            else:
+                count += 1
 
         with open(self.inverted_index_file, 'w') as fp:
             json.dump(self.inverted_index, fp)
@@ -183,20 +190,22 @@ class ImageSimilarity:
         intermediate_output = model.predict(x)
         return intermediate_output[0]
 
-    def get_knn(self, filename, top_k):
-        with open(self.inverted_index_file, 'r') as fp:
-            self.inverted_index = json.load(fp)
+    def get_knn(self, filename, top_k=10):
 
-        neighbors = self.inverted_index[filename][0, top_k]
+        if self.inverted_index is None:
+            with open(self.inverted_index_file, 'r') as fp:
+                self.inverted_index = json.load(fp)
 
-        self.draw_images(neighbors)
+        neighbors = self.inverted_index[filename][0:top_k]
+
+        self.draw_images(filename, neighbors)
 
         # for neighbor in neighbors:
         #     print(neighbor)
 
     @staticmethod
-    def draw_images(images):
-        fig = plt.figure(figsize=(28, 28))
+    def draw_images(target, images):
+        fig = plt.figure(figsize=(10, 10))
         count = len(images)
         columns = int(np.sqrt(count))
         if count == columns * columns:
@@ -208,10 +217,10 @@ class ImageSimilarity:
             if idx == len(images):
                 break
 
-            img = images[idx]
+            img = plt.imread(images[idx][0])
             fig.add_subplot(rows, columns, pos)
             plt.imshow(img)
-        plt.show()
+        plt.show(block=True)
 
 
 def main():
@@ -221,9 +230,12 @@ def main():
     # imageSimilarity.train()
 
     # imageSimilarity.create_all_vec()
-    imageSimilarity.calac_knn(10)
+    # imageSimilarity.calac_knn(10)
 
-    # imageSimilarity.get_knn('./geological_similarity/andesite/0FVDN.jpg')
+    imageSimilarity.get_knn("./geological_similarity/marble/044F9.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/ZJXOD.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/4Z461.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/ENIUQ.jpg", 10)
 
 
 if __name__ == '__main__':
