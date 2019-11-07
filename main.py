@@ -19,6 +19,7 @@ from zipfile import ZipFile
 from os import listdir
 
 from sklearn.metrics.pairwise import cosine_similarity
+import matplotlib.pyplot as plt
 
 NUM_CLASSES = 6
 IMAGE_RESIZE = 224
@@ -129,23 +130,23 @@ class ImageSimilarity:
             path = os.path.join(self.image_data_path, elem)
             images = [f for f in listdir(path) if ".jpg" in f]
             # print(images)
-            # count = 0
+            count = 0
 
             for image in tqdm(images):
                 image_path = os.path.join(path, image)
                 self.image_embedding[image_path] = self.__get_vec(image_path, intermediate_layer_model).tolist()
 
-                # if count > 0:
-                #     break
-                # else:
-                #     count += 1
+                if count > 0:
+                    break
+                else:
+                    count += 1
 
         with open(self.embedding_file, 'w') as fp:
             json.dump(self.image_embedding, fp)
 
-        self.__calac_knn(top_k=100)
+        self.calac_knn(top_k=100)
 
-    def __calac_knn(self, top_k):
+    def calac_knn(self, top_k):
         if not os.path.exists(self.embedding_file):
             raise Exception("Invalid Operation", f"{self.embedding_file} does not exists")
 
@@ -162,7 +163,7 @@ class ImageSimilarity:
                     continue
 
                 target_embedding = self.image_embedding[target]
-                embedding = np.array(embedding).reshape(1, len(embedding))
+                embedding = np.array(embedding).reshape(1, 32)
                 target_embedding = np.array(target_embedding).reshape(1, len(target_embedding))
                 similarities[target] = cosine_similarity(embedding, target_embedding)[0][0]
 
@@ -171,7 +172,8 @@ class ImageSimilarity:
         with open(self.inverted_index_file, 'w') as fp:
             json.dump(self.inverted_index, fp)
 
-    def __get_vec(self, image_path, model):
+    @staticmethod
+    def __get_vec(image_path, model):
 
         img = image.load_img(image_path, target_size=(IMAGE_RESIZE, IMAGE_RESIZE))
         x = image.img_to_array(img)
@@ -187,8 +189,29 @@ class ImageSimilarity:
 
         neighbors = self.inverted_index[filename][0, top_k]
 
-        for neighbor in neighbors:
-            print(neighbor)
+        self.draw_images(neighbors)
+
+        # for neighbor in neighbors:
+        #     print(neighbor)
+
+    @staticmethod
+    def draw_images(images):
+        fig = plt.figure(figsize=(28, 28))
+        count = len(images)
+        columns = int(np.sqrt(count))
+        if count == columns * columns:
+            rows = columns
+        else:
+            rows = columns + 1
+
+        for idx, pos in enumerate(range(1, columns * rows + 1)):
+            if idx == len(images):
+                break
+
+            img = images[idx]
+            fig.add_subplot(rows, columns, pos)
+            plt.imshow(img)
+        plt.show()
 
 
 def main():
@@ -197,7 +220,8 @@ def main():
     # imageSimilarity.download_file()
     # imageSimilarity.train()
 
-    imageSimilarity.create_all_vec()
+    # imageSimilarity.create_all_vec()
+    imageSimilarity.calac_knn(10)
 
     # imageSimilarity.get_knn('./geological_similarity/andesite/0FVDN.jpg')
 
