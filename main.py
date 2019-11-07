@@ -9,15 +9,16 @@ from tensorflow.keras import optimizers
 from tensorflow.keras.models import load_model
 import numpy as np
 from tensorflow.python.keras.callbacks import ModelCheckpoint
-import tensorflow as tf
+from tqdm import tqdm
 
 import os
 import requests
+import json
 
 from zipfile import ZipFile
 from os import listdir
 
-from scipy import spatial
+from sklearn.metrics.pairwise import cosine_similarity
 
 NUM_CLASSES = 6
 IMAGE_RESIZE = 224
@@ -37,7 +38,10 @@ class ImageSimilarity:
         self.trained_weights_path = './working/best.hdf5'
         self.image_data_path = './geological_similarity'
         self.zipfile_name = "./geological_similarity.zip"
+        self.embedding_file = './embeddings.json'
+        self.inverted_index_file = "./inverted_index.json"
         self.inverted_index = {}
+        self.image_embedding = {}
 
         if not os.path.exists('./working'):
             os.mkdir('./working')
@@ -110,29 +114,62 @@ class ImageSimilarity:
 
         model.load_weights(self.trained_weights_path)
 
-    def get_all_vec(self):
+    def create_all_vec(self):
         if not os.path.exists(self.image_data_path):
             raise Exception("Invalid Operation", f"{self.image_data_path} does not exists")
 
-        model = load_model(self.trained_weights_path)
+        base_model = load_model(self.trained_weights_path)
+        base_model.summary()
+        intermediate_layer_model = Model(inputs=base_model.inputs, outputs=base_model.layers[1].output)
 
-        model.summary()
-        # if os.path.exists(self.trained_weights_path):
-        #     model.load_weights(self.trained_weights_path, by_name=True)
-
-        intermediate_layer_model = Model(inputs=model.inputs, outputs=model.layers[1].output)
-
-        self.inverted_index = {}
+        self.image_embedding = {}
 
         classes = [f for f in listdir(self.image_data_path) if not f.startswith('.')]
-        for elem in classes:
+        for elem in tqdm(classes):
             path = os.path.join(self.image_data_path, elem)
             images = [f for f in listdir(path) if ".jpg" in f]
             # print(images)
-            for image in images:
+            # count = 0
+
+            for image in tqdm(images):
                 image_path = os.path.join(path, image)
-                self.inverted_index[image_path] = self.get_vec(image_path, intermediate_layer_model)
-                print(image_path, " ", self.inverted_index[image_path])
+                self.image_embedding[image_path] = self.get_vec(image_path, intermediate_layer_model).tolist()
+
+                # if count > 0:
+                #     break
+                # else:
+                #     count += 1
+
+        with open(self.embedding_file, 'w') as fp:
+            json.dump(self.image_embedding, fp)
+
+        self.calac_knn(top_k=100)
+
+    def calac_knn(self, top_k):
+        if not os.path.exists(self.embedding_file):
+            raise Exception("Invalid Operation", f"{self.embedding_file} does not exists")
+
+        with open(self.embedding_file, 'r') as fp:
+            self.image_embedding = json.load(fp)
+
+        similarities = {}
+        self.inverted_index = {}
+
+        for key in tqdm(self.image_embedding.keys()):
+            embedding = self.image_embedding[key]
+            for target in self.image_embedding.keys():
+                if key == target:
+                    continue
+
+                target_embedding = self.image_embedding[target]
+                embedding = np.array(embedding).reshape(1, len(embedding))
+                target_embedding = np.array(target_embedding).reshape(1, len(target_embedding))
+                similarities[target] = cosine_similarity(embedding, target_embedding)[0][0]
+
+            self.inverted_index[key] = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[0:top_k]
+
+        with open(self.inverted_index_file, 'w') as fp:
+            json.dump(self.inverted_index, fp)
 
     def get_vec(self, image_path, model):
 
@@ -148,10 +185,10 @@ class ImageSimilarity:
 def main():
     imageSimilarity = ImageSimilarity()
 
-    imageSimilarity.download_file()
-    imageSimilarity.train()
+    # imageSimilarity.download_file()
+    # imageSimilarity.train()
 
-    imageSimilarity.get_all_vec()
+    imageSimilarity.create_all_vec()
 
     # imageSimilarity.get_vec('./geological_similarity/andesite/0FVDN.jpg')
 
