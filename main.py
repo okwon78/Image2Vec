@@ -6,9 +6,10 @@ from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.layers import Dense
 from tensorflow.keras import optimizers
-import tensorflow.keras.backend as K
+from tensorflow.keras.models import load_model
 import numpy as np
 from tensorflow.python.keras.callbacks import ModelCheckpoint
+import tensorflow as tf
 
 import os
 import requests
@@ -57,6 +58,7 @@ class ImageSimilarity:
         model = Sequential()
         resnet = ResNet50(include_top=False, pooling='avg', weights='imagenet')
         # resnet.summary()
+
         model.add(resnet)
         model.add(Dense(32, activation='relu', name="embedding"))
         model.add(Dense(NUM_CLASSES, activation='softmax'))
@@ -86,10 +88,11 @@ class ImageSimilarity:
             class_mode='categorical')
 
     def train(self):
-        model = self.build_model()
 
         if os.path.exists(self.trained_weights_path):
-            model.load_weights(self.trained_weights_path)
+            model = load_model(self.trained_weights_path)
+        else:
+            model = self.build_model()
 
         self.__data_prepare()
 
@@ -111,10 +114,11 @@ class ImageSimilarity:
         if not os.path.exists(self.image_data_path):
             raise Exception("Invalid Operation", f"{self.image_data_path} does not exists")
 
-        model = self.build_model()
+        model = load_model(self.trained_weights_path)
 
-        if os.path.exists(self.trained_weights_path):
-            model.load_weights(self.trained_weights_path)
+        model.summary()
+        # if os.path.exists(self.trained_weights_path):
+        #     model.load_weights(self.trained_weights_path, by_name=True)
 
         intermediate_layer_model = Model(inputs=model.inputs, outputs=model.layers[1].output)
 
