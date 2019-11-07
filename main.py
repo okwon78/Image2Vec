@@ -133,7 +133,7 @@ class ImageSimilarity:
 
             for image in tqdm(images):
                 image_path = os.path.join(path, image)
-                self.image_embedding[image_path] = self.get_vec(image_path, intermediate_layer_model).tolist()
+                self.image_embedding[image_path] = self.__get_vec(image_path, intermediate_layer_model).tolist()
 
                 # if count > 0:
                 #     break
@@ -143,9 +143,9 @@ class ImageSimilarity:
         with open(self.embedding_file, 'w') as fp:
             json.dump(self.image_embedding, fp)
 
-        self.calac_knn(top_k=100)
+        self.__calac_knn(top_k=100)
 
-    def calac_knn(self, top_k):
+    def __calac_knn(self, top_k):
         if not os.path.exists(self.embedding_file):
             raise Exception("Invalid Operation", f"{self.embedding_file} does not exists")
 
@@ -171,7 +171,7 @@ class ImageSimilarity:
         with open(self.inverted_index_file, 'w') as fp:
             json.dump(self.inverted_index, fp)
 
-    def get_vec(self, image_path, model):
+    def __get_vec(self, image_path, model):
 
         img = image.load_img(image_path, target_size=(IMAGE_RESIZE, IMAGE_RESIZE))
         x = image.img_to_array(img)
@@ -180,6 +180,15 @@ class ImageSimilarity:
 
         intermediate_output = model.predict(x)
         return intermediate_output[0]
+
+    def get_knn(self, filename, top_k):
+        with open(self.inverted_index_file, 'r') as fp:
+            self.inverted_index = json.load(fp)
+
+        neighbors = self.inverted_index[filename][0, top_k]
+
+        for neighbor in neighbors:
+            print(neighbor)
 
 
 def main():
@@ -190,7 +199,7 @@ def main():
 
     imageSimilarity.create_all_vec()
 
-    # imageSimilarity.get_vec('./geological_similarity/andesite/0FVDN.jpg')
+    # imageSimilarity.get_knn('./geological_similarity/andesite/0FVDN.jpg')
 
 
 if __name__ == '__main__':
