@@ -53,7 +53,7 @@ intermediate_output = model.predict(x)
 ```
 
 Finally, I builded a inverted index; Key is file path and value is a sorted list by cosine similarities.
-The reason why I chose cosine distance instand of euclidean distance is that In high dimension space, cosine distance is a better choice because of curse of dimension.
+The reason why I chose cosine distance instand of euclidean distance is that cosine distance is a better choice in high dimension space because of curse of dimension.
 
 
 ```python
