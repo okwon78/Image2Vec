@@ -105,7 +105,6 @@ class ImageSimilarity:
 
         cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path, monitor='val_loss', save_best_only=True,
                                           mode='auto')
-
         fit_history = model.fit_generator(
             self.train_generator,
             steps_per_epoch=30,
@@ -157,7 +156,9 @@ class ImageSimilarity:
 
         similarities = {}
         self.inverted_index = {}
+        
         count = 0
+
         for key in tqdm(self.image_embedding.keys()):
             embedding = self.image_embedding[key]
             for target in self.image_embedding.keys():
@@ -171,7 +172,7 @@ class ImageSimilarity:
 
             self.inverted_index[key] = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[0:top_k]
 
-            if count > 10:
+            if count > 200:
                 break
             else:
                 count += 1
@@ -226,16 +227,25 @@ class ImageSimilarity:
 def main():
     imageSimilarity = ImageSimilarity()
 
+    # train model
     # imageSimilarity.download_file()
     # imageSimilarity.train()
 
+    # extract embeddings
     # imageSimilarity.create_all_vec()
+
+    # create inverted index for searching
     # imageSimilarity.calac_knn(10)
 
-    imageSimilarity.get_knn("./geological_similarity/marble/044F9.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/ZJXOD.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/4Z461.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/ENIUQ.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/MGN0Z.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/W90SQ.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/2G6SC.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/PSQ1K.jpg", 10)
+
+    # imageSimilarity.get_knn("./geological_similarity/marble/CSJY1.jpg", 10)
+    # imageSimilarity.get_knn("./geological_similarity/marble/D9R51.jpg", 10)
+    # imageSimilarity.get_knn("./geological_similarity/marble/IDUCB.jpg", 10)
+
 
 
 if __name__ == '__main__':
