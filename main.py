@@ -228,14 +228,14 @@ def main():
     imageSimilarity = ImageSimilarity()
 
     # train model
-    # imageSimilarity.download_file()
-    # imageSimilarity.train()
+    imageSimilarity.download_file()
+    imageSimilarity.train()
 
     # extract embeddings
-    # imageSimilarity.create_all_vec()
+    imageSimilarity.create_all_vec()
 
     # create inverted index for searching
-    # imageSimilarity.calac_knn(10)
+    imageSimilarity.calac_knn(10)
 
     imageSimilarity.get_knn("./geological_similarity/marble/MGN0Z.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/marble/W90SQ.jpg", 10)

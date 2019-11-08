@@ -4,7 +4,7 @@ I tried to identify similar images for a given image using CNN.
 Especially, I used pre-trained resent50 becasue of lack of time resources.
 The reason why I chose resent50 is that It doesn't hurt performance much, becuse of skip connections, even though resnet50 is one of the heavy models.
 
-On top of the resnet which does not include original top, I stacked two more layers. One is for feature extraction named embedding 
+On top of the trained resnet with imagenet which does not include original top, I stacked two more layers. One is for feature extraction named embedding. 
 The next is softmax layer for training new data. And I did not train resnet layers. I only train added two layers. Thus I set trainable variable of resnet model to False.
 
 ```python
@@ -35,13 +35,13 @@ fit_history = model.fit_generator(
 )
 ```
 
-After training, I build new model to extract image embeddings
+After training, I builded new model from previous model to extract image embeddings
 
 ```python
 base_model = load_model(self.trained_weights_path)
 intermediate_layer_model = Model(inputs=base_model.inputs, outputs=base_model.layers[1].output)
 ```
-And then, I extract embeddings from all of images
+And then, I extracted embeddings from all of images
 
 ```python
 img = image.load_img(image_path, target_size=(IMAGE_RESIZE, IMAGE_RESIZE))
@@ -52,8 +52,8 @@ x = preprocess_input(x)
 intermediate_output = model.predict(x)
 ```
 
-Finally, I build a inverted index which is similar to search engine.
-Key is file path, and value is sorted list
+Finally, I builded a inverted index; Key is file path and value is a sorted list by cosine similarities.
+The reason why I chose cosine distance instand of euclidean distance is that In high dimension space, cosine distance is a better choice because of curse of dimension.
 
 
 ```python
@@ -70,8 +70,38 @@ for key in tqdm(self.image_embedding.keys()):
 
     self.inverted_index[key] = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[0:top_k]
 ```
+## To run code
 
-# Sample
+```bash
+$ python main.py
+```
 
-![marble/MGN0Z.jpg](/images/sample1.png)
-![marble/PSQ1K.jpg](/images/sample2.png)
+## main method
+```python
+def main():
+    imageSimilarity = ImageSimilarity()
+
+    # train model
+    imageSimilarity.download_file()
+    imageSimilarity.train()
+
+    # extract embeddings
+    imageSimilarity.create_all_vec()
+
+    # create inverted index for searching
+    imageSimilarity.calac_knn(10)
+
+    imageSimilarity.get_knn("./geological_similarity/marble/MGN0Z.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/W90SQ.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/2G6SC.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/marble/PSQ1K.jpg", 10)
+
+```
+## files
+- **/working/best.hdfs5** : trained weights
+- **embeddings.json** : embeddings of all images
+- **inverted-index.json** : inverted index
+## Samples
+
+![](/images/sample1.png)
+![](/images/sample2.png)
