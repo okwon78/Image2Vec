@@ -130,12 +130,10 @@ dmypy.json
 *.jpg
 *.zip
 
-*.hdf5
 *.h5
 *.jpg
 
 *.zip
 
 geological_similarity/
-working/
 __MACOSX/
