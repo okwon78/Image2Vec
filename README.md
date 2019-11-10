@@ -1,11 +1,11 @@
 # Geological Image Similarity
 
 I tried to identify similar images for a given image using CNN.
-Especially, I used pre-trained resent50 becasue of lack of time resources.
-The reason why I chose resent50 is that It doesn't hurt performance much, becuse of skip connections, even though resnet50 is one of the heavy models.
+Especially, I used pre-trained resent50 because of a lack of time resources.
+The reason why I chose resent50 is that It doesn't hurt performance much, because of skip connections, even though resnet50 is one of the heavy models.
 
-On top of the trained resnet with imagenet which does not include original top, I stacked two more layers. One is for feature extraction named embedding. 
-The next is softmax layer for training new data. And I did not train resnet layers. I only train added two layers. Thus I set trainable variable of resnet model to False.
+On top of the trained resnet with imagenet which does not include the original top, I stacked two more layers. One is for feature extraction named embedding. 
+The next is a softmax layer for training new data. And I did not train resnet layers. I only train added two layers. Thus I set the trainable variable of resnet model to False.
 
 ```python
 model = Sequential()
@@ -18,8 +18,9 @@ model.add(Dense(NUM_CLASSES, activation='softmax'))
 model.layers[0].trainable = False
 ```
 
-During training, I used all data. In general, train, validation and test dataset are required to estimate model performance or to compare other models   
-However, I don't care about measuring model performance. So I do not split dataset into train, validation and test.
+During training, I used all the data. In general, train, validation and test dataset are required to estimate model performance or to compare other models   
+However, I don't care about measuring model performance. So I do not split the dataset into train, validation, and test.
+
 
 
 ```python
@@ -35,13 +36,13 @@ fit_history = model.fit_generator(
 )
 ```
 
-After training, I builded new model from previous model to extract image embeddings
+After training, I built a new model from the previous model to extract image embeddings
 
 ```python
 base_model = load_model(self.trained_weights_path)
 intermediate_layer_model = Model(inputs=base_model.inputs, outputs=base_model.layers[1].output)
 ```
-And then, I extracted embeddings from all of images
+And then, I extracted embeddings from all of the images
 
 ```python
 img = image.load_img(image_path, target_size=(IMAGE_RESIZE, IMAGE_RESIZE))
@@ -53,7 +54,7 @@ intermediate_output = model.predict(x)
 ```
 
 Finally, I builded a inverted index; Key is file path and value is a sorted list by cosine similarities.
-The reason why I chose cosine distance instand of euclidean distance is that cosine distance is a better choice in high dimension space because of curse of dimension.
+The reason why I chose cosine distance instand of euclidean distance is that cosine distance is a better choice in high dimension space, because of curse of dimension.
 
 
 ```python
