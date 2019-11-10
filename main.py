@@ -20,7 +20,7 @@ from os import listdir
 
 from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+from shutil import copyfile
 
 NUM_CLASSES = 6
 IMAGE_RESIZE = 224
@@ -40,6 +40,10 @@ class ImageSimilarity:
         self.trained_weights_path = './working/best.hdf5'
         self.image_data_path = './geological_similarity'
         self.zipfile_name = "./geological_similarity.zip"
+        self.data_dir = "./data"
+        self.train_dir = "./data/train"
+        self.validation_dir = "./data/valid"
+
         self.embedding_file = './embeddings.json'
         self.inverted_index_file = "./inverted_index.json"
         self.inverted_index = {}
@@ -50,6 +54,9 @@ class ImageSimilarity:
             os.mkdir('./working')
 
     def download_file(self):
+        """
+        Download geological_similarity.zip file and Extract zip file
+        """
         if os.path.exists(self.image_data_path):
             return
         r = requests.get(data_url, allow_redirects=True)
@@ -61,7 +68,54 @@ class ImageSimilarity:
 
         os.remove(self.zipfile_name)
 
+    def split_data(self):
+        """
+        split geological_similarity into train and validation data
+        """
+        if not os.path.exists(self.image_data_path):
+            raise Exception("Data do not exist")
+
+        if not os.path.exists(self.data_dir):
+            os.mkdir(self.data_dir)
+        if not os.path.exists(self.train_dir):
+            os.mkdir(self.train_dir)
+        if not os.path.exists(self.validation_dir):
+            os.mkdir(self.validation_dir)
+
+        classes = [f for f in listdir(self.image_data_path) if not f.startswith('.')]
+        for elem in tqdm(classes):
+            path = os.path.join(self.image_data_path, elem)
+            images = [f for f in listdir(path) if ".jpg" in f]
+            total_count = len(images)
+            split_num = int(total_count / 3)
+
+            train_class_dir = os.path.join(self.train_dir, elem)
+            if not os.path.exists(train_class_dir):
+                os.mkdir(train_class_dir)
+
+            validation_class_dir = os.path.join(self.validation_dir, elem)
+            if not os.path.exists(validation_class_dir):
+                os.mkdir(validation_class_dir)
+
+            train_data = images[0:split_num]
+            train_data = [(os.path.join(self.image_data_path, elem, f), os.path.join(train_class_dir, f)) for f in
+                          train_data]
+
+            for pair in train_data:
+                copyfile(pair[0], pair[1])
+
+            validation_data = images[split_num:-1]
+            validation_data = [(os.path.join(self.image_data_path, elem, f), os.path.join(validation_class_dir, f)) for
+                               f in validation_data]
+
+            for pair in validation_data:
+                copyfile(pair[0], pair[1])
+
     def build_model(self):
+        """
+        build train model
+        resnet + embedding layer + softmax layer
+        """
         model = Sequential()
         resnet = ResNet50(include_top=False, pooling='avg', weights='imagenet')
         # resnet.summary()
@@ -77,46 +131,54 @@ class ImageSimilarity:
 
         return model
 
-    def __data_prepare(self):
+    def create_generator(self):
+        """
+        Create train_generator, validation_generator
+        """
         data_generator = ImageDataGenerator(preprocessing_function=preprocess_input)
 
         self.train_generator = data_generator.flow_from_directory(
-            self.image_data_path,
+            self.train_dir,
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
             shuffle=True,
             batch_size=100,
             class_mode='categorical')
 
         self.validation_generator = data_generator.flow_from_directory(
-            self.image_data_path,
+            self.validation_dir,
             target_size=(IMAGE_RESIZE, IMAGE_RESIZE),
             shuffle=True,
-            batch_size=1,
+            batch_size=100,
             class_mode='categorical')
 
     def train(self):
-
+        """
+        Transfer learning
+        """
         if os.path.exists(self.trained_weights_path):
             model = load_model(self.trained_weights_path)
         else:
             model = self.build_model()
 
-        self.__data_prepare()
+        self.create_generator()
 
         cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path, monitor='val_loss', save_best_only=True,
                                           mode='auto')
         fit_history = model.fit_generator(
             self.train_generator,
-            steps_per_epoch=30,
+            steps_per_epoch=100,
             epochs=NUM_EPOCHS,
             validation_data=self.validation_generator,
-            validation_steps=3000,
+            validation_steps=100,
             callbacks=[cb_checkpointer]
         )
 
         model.load_weights(self.trained_weights_path)
 
     def create_all_vec(self):
+        """
+        feed-forward to extract all the embeddings from all images in geological_similarity directory
+        """
         if not os.path.exists(self.image_data_path):
             raise Exception("Invalid Operation", f"{self.image_data_path} does not exists")
 
@@ -130,24 +192,19 @@ class ImageSimilarity:
         for elem in tqdm(classes):
             path = os.path.join(self.image_data_path, elem)
             images = [f for f in listdir(path) if ".jpg" in f]
-            # print(images)
-            count = 0
 
             for image in tqdm(images):
                 image_path = os.path.join(path, image)
                 self.image_embedding[image_path] = self.__get_vec(image_path, intermediate_layer_model).tolist()
 
-                if count > 0:
-                    break
-                else:
-                    count += 1
-
         with open(self.embedding_file, 'w') as fp:
             json.dump(self.image_embedding, fp)
 
-        self.calac_knn(top_k=100)
-
     def calac_knn(self, top_k):
+        """
+        1. get cosine distance
+        2. save top k nearest neighbors into inverted_index
+        """
         if not os.path.exists(self.embedding_file):
             raise Exception("Invalid Operation", f"{self.embedding_file} does not exists")
 
@@ -156,10 +213,9 @@ class ImageSimilarity:
 
         similarities = {}
         self.inverted_index = {}
-        
-        count = 0
 
         for key in tqdm(self.image_embedding.keys()):
+
             embedding = self.image_embedding[key]
             for target in self.image_embedding.keys():
                 if key == target:
@@ -171,11 +227,6 @@ class ImageSimilarity:
                 similarities[target] = cosine_similarity(embedding, target_embedding)[0][0]
 
             self.inverted_index[key] = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[0:top_k]
-
-            if count > 200:
-                break
-            else:
-                count += 1
 
         with open(self.inverted_index_file, 'w') as fp:
             json.dump(self.inverted_index, fp)
@@ -192,7 +243,9 @@ class ImageSimilarity:
         return intermediate_output[0]
 
     def get_knn(self, filename, top_k=10):
-
+        """
+        Check nearest neighbors from pre-built inverted index file
+        """
         if self.inverted_index is None:
             with open(self.inverted_index_file, 'r') as fp:
                 self.inverted_index = json.load(fp)
@@ -227,8 +280,13 @@ class ImageSimilarity:
 def main():
     imageSimilarity = ImageSimilarity()
 
-    # train model
+    # download train data
     imageSimilarity.download_file()
+
+    # split data into train and validation
+    imageSimilarity.split_data()
+
+    # train model
     imageSimilarity.train()
 
     # extract embeddings
@@ -237,15 +295,8 @@ def main():
     # create inverted index for searching
     imageSimilarity.calac_knn(10)
 
-    imageSimilarity.get_knn("./geological_similarity/marble/MGN0Z.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/W90SQ.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/2G6SC.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/PSQ1K.jpg", 10)
-
-    # imageSimilarity.get_knn("./geological_similarity/marble/CSJY1.jpg", 10)
-    # imageSimilarity.get_knn("./geological_similarity/marble/D9R51.jpg", 10)
-    # imageSimilarity.get_knn("./geological_similarity/marble/IDUCB.jpg", 10)
-
+    # check top 10 neighbors
+    imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
 
 
 if __name__ == '__main__':

@@ -18,20 +18,18 @@ model.add(Dense(NUM_CLASSES, activation='softmax'))
 model.layers[0].trainable = False
 ```
 
-During training, I used all the data. In general, train, validation and test dataset are required to estimate model performance or to compare other models   
-However, I don't care about measuring model performance. So I do not split the dataset into train, validation, and test.
-
-
+I split all the data into train and validation. In general, train, validation and test dataset are required to estimate model performance or to compare other models   
+However, I don't care about measuring model performance. So I only split the dataset into train and validation.
 
 ```python
 cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path, monitor='val_loss', save_best_only=True, mode='auto')
 
 fit_history = model.fit_generator(
     self.train_generator,
-    steps_per_epoch=30,
+    steps_per_epoch=100,
     epochs=NUM_EPOCHS,
     validation_data=self.validation_generator,
-    validation_steps=3000,
+    validation_steps=100,
     callbacks=[cb_checkpointer]
 )
 ```
@@ -99,9 +97,14 @@ def main():
 
 ```
 ## files
-- **/working/best.hdfs5** : trained weights
-- **embeddings.json** : embeddings of all images
-- **inverted-index.json** : inverted index
+- **main.py**
+    - source code
+- **/working/best.hdfs5**
+    - trained weights
+- **embeddings.json**
+    - embeddings of all images
+- **inverted-index.json**
+    - inverted index for searching
 ## Samples
 
 ![](/images/sample1.png)
