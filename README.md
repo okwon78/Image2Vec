@@ -136,10 +136,13 @@ def main():
     # create inverted index with ANN for searching
     imageSimilarity.calc_knn_annoy(10)
 
-    # check top 10 neighbors
+    # check top 10 neighbors from inverted index
     imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/gneiss/1OK58.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/andesite/0JDL9.jpg", 10)
+
+    # get similar images from a unseen image
+    imageSimilarity.get_similar_image("./data/valid/quartzite/2P42M.jpg", 10)
 ```
 ## files
 - **main.py**

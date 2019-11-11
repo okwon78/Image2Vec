@@ -53,6 +53,8 @@ class ImageSimilarity:
         self.image_embedding = {}
         self.inverted_index = None
         self.annoyIndex = None
+        self.annyIndexTofilenames = None
+        self.intermediate_layer_model = None
 
         if not os.path.exists('./working'):
             os.mkdir('./working')
@@ -188,10 +190,6 @@ class ImageSimilarity:
         if not os.path.exists(self.image_data_path):
             raise Exception("Invalid Operation", f"{self.image_data_path} does not exists")
 
-        base_model = load_model(self.trained_weights_path)
-        base_model.summary()
-        intermediate_layer_model = Model(inputs=base_model.inputs, outputs=base_model.layers[1].output)
-
         self.image_embedding = {}
 
         classes = [f for f in listdir(self.image_data_path) if not f.startswith('.')]
@@ -201,7 +199,7 @@ class ImageSimilarity:
 
             for image in tqdm(images):
                 image_path = os.path.join(path, image)
-                self.image_embedding[image_path] = self.__get_vec(image_path, intermediate_layer_model).tolist()
+                self.image_embedding[image_path] = self.__get_vec(image_path)
 
         with open(self.embedding_file, 'w') as fp:
             json.dump(self.image_embedding, fp)
@@ -247,10 +245,10 @@ class ImageSimilarity:
 
         self.annoyIndex = AnnoyIndex(EMBEDDING_SIZE, 'angular')
 
-        filenames = {}
+        self.annyIndexTofilenames = {}
         for idx, key in tqdm(enumerate(self.image_embedding.keys())):
             self.annoyIndex.add_item(idx, self.image_embedding[key])
-            filenames[idx] = [key, 0]
+            self.annyIndexTofilenames[idx] = [key, 0]
 
         self.annoyIndex.build(-1)
 
@@ -263,23 +261,26 @@ class ImageSimilarity:
             for target in indexes:
                 if idx == target:
                     continue
-                values.append(filenames[target])
+                values.append(self.annyIndexTofilenames[target])
 
             self.inverted_index[key] = values
 
         with open(self.inverted_index_file, 'w') as fp:
             json.dump(self.inverted_index, fp)
 
-    @staticmethod
-    def __get_vec(image_path, model):
+    def __get_vec(self, image_path):
+
+        if self.intermediate_layer_model is None:
+            base_model = load_model(self.trained_weights_path)
+            self.intermediate_layer_model = Model(inputs=base_model.inputs, outputs=base_model.layers[1].output)
 
         img = image.load_img(image_path, target_size=(IMAGE_RESIZE, IMAGE_RESIZE))
         x = image.img_to_array(img)
         x = np.expand_dims(x, axis=0)
         x = preprocess_input(x)
 
-        intermediate_output = model.predict(x)
-        return intermediate_output[0]
+        intermediate_output = self.intermediate_layer_model.predict(x)
+        return intermediate_output[0].tolist()
 
     def get_knn(self, filename, top_k=10):
         """
@@ -291,13 +292,29 @@ class ImageSimilarity:
 
         neighbors = self.inverted_index[filename][0:top_k]
 
-        self.draw_images(filename, neighbors)
+        self.draw_images(neighbors)
 
         for neighbor in neighbors:
             print(neighbor)
 
+    def get_similar_image(self, new_image_path, top_k):
+        if self.annoyIndex is None:
+            self.calc_knn_annoy(top_k)
+
+        embeddings = self.__get_vec(new_image_path)
+        indexes = self.annoyIndex.get_nns_by_vector(embeddings, top_k)
+        nn = []
+        for idx in indexes:
+            nn.append(self.annyIndexTofilenames[idx])
+
+        self.draw_images(nn)
+
     @staticmethod
-    def draw_images(target, images):
+    def draw_images(images):
+
+        if images is None:
+            raise Exception("invalid input")
+
         fig = plt.figure(figsize=(10, 10))
         count = len(images)
         columns = int(np.sqrt(count))
@@ -332,15 +349,19 @@ def main():
     imageSimilarity.create_all_vec()
 
     # create inverted index with cosine similarities for searching
-    imageSimilarity.calac_knn(10)
+    imageSimilarity.calac_knn(100)
 
     # create inverted index with ANN for searching
-    imageSimilarity.calc_knn_annoy(10)
+    imageSimilarity.calc_knn_annoy(100)
 
     # check top 10 neighbors
     imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/gneiss/1OK58.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/andesite/0JDL9.jpg", 10)
+
+    # get similar images from a unseen image
+    imageSimilarity.get_similar_image("./data/valid/quartzite/2P42M.jpg", 10)
+
 
 if __name__ == '__main__':
     main()
