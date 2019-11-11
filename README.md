@@ -77,7 +77,7 @@ for key in tqdm(self.image_embedding.keys()):
     self.inverted_index[key] = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[0:top_k]
 ```
 
-Computing the cosine similarity takes too long in order to calculate all the distance of images because its time complexity is big o of n squared.  
+Computing the cosine similarity takes too long in order to calculate all the distance of images because its time complexity is big o of n squared.
 So I also use spotify's annoy to compute nearest neighbors. This Algorithm is one of teh popular the Approximate Nearest Neighbors Algorithms.
 Usually, the ANN Algorithms are much faster than general Nearest neighbor search. 
  
