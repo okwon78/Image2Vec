@@ -321,7 +321,7 @@ class ImageSimilarity:
     @staticmethod
     def draw_images(images):
         """
-        draws image using matplotlib
+        draws images using matplotlib
         """
         if images is None:
             raise Exception("invalid input")
@@ -371,7 +371,7 @@ def main():
     imageSimilarity.get_knn("./geological_similarity/andesite/0JDL9.jpg", 10)
 
     # get similar images from a unseen image
-    imageSimilarity.get_similar_image("./data/valid/quartzite/2P42M.jpg", 10)
+    imageSimilarity.get_similar_image("./0HBTF.jpg", 10)
 
 
 if __name__ == '__main__':
