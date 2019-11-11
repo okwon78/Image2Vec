@@ -206,7 +206,7 @@ class ImageSimilarity:
 
     def calac_knn(self, top_k):
         """
-        1. gets cosine distance
+        1. gets cosine distances
         2. saves top k nearest neighbors using cosine_similarity of sklearn into  inverted_index
         """
         if not os.path.exists(self.embedding_file):
@@ -237,7 +237,7 @@ class ImageSimilarity:
 
     def calc_knn_annoy(self, top_k):
         """
-        1. gets cosine distance
+        1. build annoy tree to compute k nearest neighbors
         2. saves top k nearest neighbors using annoy into inverted_index
         """
         if not os.path.exists(self.embedding_file):
