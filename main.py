@@ -61,7 +61,7 @@ class ImageSimilarity:
 
     def download_file(self):
         """
-        Download geological_similarity.zip file and Extract zip file
+        Downloads geological_similarity.zip file and Extract zip file
         """
         if os.path.exists(self.image_data_path):
             return
@@ -76,7 +76,7 @@ class ImageSimilarity:
 
     def split_data(self):
         """
-        split geological_similarity into train and validation data
+        splits geological_similarity into train and validation data
         """
         if not os.path.exists(self.image_data_path):
             raise Exception("Data do not exist")
@@ -121,7 +121,7 @@ class ImageSimilarity:
 
     def build_model(self):
         """
-        build train model
+        builds train model
         resnet + embedding layer + softmax layer
         """
         model = Sequential()
@@ -141,7 +141,7 @@ class ImageSimilarity:
 
     def create_generator(self):
         """
-        Create train_generator, validation_generator
+        Creates train_generator, validation_generator
         """
         data_generator = ImageDataGenerator(preprocessing_function=preprocess_input)
 
@@ -206,8 +206,8 @@ class ImageSimilarity:
 
     def calac_knn(self, top_k):
         """
-        1. get cosine distance
-        2. save top k nearest neighbors into inverted_index
+        1. gets cosine distance
+        2. saves top k nearest neighbors using cosine_similarity of sklearn into  inverted_index
         """
         if not os.path.exists(self.embedding_file):
             raise Exception("Invalid Operation", f"{self.embedding_file} does not exists")
@@ -236,7 +236,10 @@ class ImageSimilarity:
             json.dump(self.inverted_index, fp)
 
     def calc_knn_annoy(self, top_k):
-
+        """
+        1. gets cosine distance
+        2. saves top k nearest neighbors using annoy into inverted_index
+        """
         if not os.path.exists(self.embedding_file):
             raise Exception("Invalid Operation", f"{self.embedding_file} does not exists")
 
@@ -269,7 +272,9 @@ class ImageSimilarity:
             json.dump(self.inverted_index, fp)
 
     def __get_vec(self, image_path):
-
+        """
+        returns a embedding, given a image
+        """
         if self.intermediate_layer_model is None:
             base_model = load_model(self.trained_weights_path)
             self.intermediate_layer_model = Model(inputs=base_model.inputs, outputs=base_model.layers[1].output)
@@ -284,7 +289,7 @@ class ImageSimilarity:
 
     def get_knn(self, filename, top_k=10):
         """
-        Check nearest neighbors from pre-built inverted index file
+        Checks nearest neighbors from pre-built inverted index file
         """
         if self.inverted_index is None:
             with open(self.inverted_index_file, 'r') as fp:
@@ -298,6 +303,10 @@ class ImageSimilarity:
             print(neighbor)
 
     def get_similar_image(self, new_image_path, top_k):
+        """
+        1. gets a embedding vector, given a image
+        2. returns similar images using annoy
+        """
         if self.annoyIndex is None:
             self.calc_knn_annoy(top_k)
 
@@ -311,7 +320,9 @@ class ImageSimilarity:
 
     @staticmethod
     def draw_images(images):
-
+        """
+        draws image using matplotlib
+        """
         if images is None:
             raise Exception("invalid input")
 
