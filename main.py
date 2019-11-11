@@ -255,7 +255,6 @@ class ImageSimilarity:
         self.annoyIndex.build(-1)
 
         self.inverted_index = {}
-
         print(len(self.image_embedding))
         for idx, key in tqdm(enumerate(self.image_embedding.keys())):
             indexes = self.annoyIndex.get_nns_by_item(idx, top_k)

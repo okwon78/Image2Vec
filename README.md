@@ -62,9 +62,6 @@ intermediate_output = model.predict(x)
 Finally, I builded a inverted index; Key is file path and value is a sorted list by cosine similarities.
 The reason why I chose cosine distance instand of euclidean distance is that cosine distance is a better choice in high dimension space, because of curse of dimensionality.
 
-Computing the cosine similarity takes too long according to the number of images because its time complexity is big o of n squared. 
-If I had more time, I would like to apply Approximate Nearest Neighbors Algorithms such as spotify's annoy. 
-
 ```python
 for key in tqdm(self.image_embedding.keys()):
     embedding = self.image_embedding[key]
@@ -79,6 +76,37 @@ for key in tqdm(self.image_embedding.keys()):
 
     self.inverted_index[key] = sorted(similarities.items(), key=lambda x: x[1], reverse=True)[0:top_k]
 ```
+
+Computing the cosine similarity takes too long in order to calculate all the distance of images because its time complexity is big o of n squared.  
+So I also use spotify's annoy to compute nearest neighbors. This Algorithm is one of teh popular the Approximate Nearest Neighbors Algorithms.
+Usually, the ANN Algorithms are much faster than general Nearest neighbor search. 
+ 
+
+```python
+self.annoyIndex = AnnoyIndex(EMBEDDING_SIZE, 'angular')
+
+filenames = {}
+for idx, key in tqdm(enumerate(self.image_embedding.keys())):
+    self.annoyIndex.add_item(idx, self.image_embedding[key])
+    filenames[idx] = [key, 0]
+
+    self.annoyIndex.build(-1)
+        
+    self.inverted_index = {}
+    print(len(self.image_embedding))
+    for idx, key in tqdm(enumerate(self.image_embedding.keys())):
+        indexes = self.annoyIndex.get_nns_by_item(idx, top_k)
+
+        values = []
+        for target in indexes:
+            if idx == target:
+                continue
+            values.append(filenames[target])
+
+        self.inverted_index[key] = values
+
+``` 
+
 ## To run code
 
 ```bash
