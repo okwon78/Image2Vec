@@ -118,20 +118,26 @@ $ python main.py
 def main():
     imageSimilarity = ImageSimilarity()
 
-    # train model
+    # download train data
     imageSimilarity.download_file()
+
+    # split data into train and validation
+    imageSimilarity.split_data()
+
+    # train model
     imageSimilarity.train()
 
     # extract embeddings
     imageSimilarity.create_all_vec()
 
-    # create inverted index for searching
+    # create inverted index with cosine similarities for searching
     imageSimilarity.calac_knn(10)
 
-    imageSimilarity.get_knn("./geological_similarity/marble/MGN0Z.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/W90SQ.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/2G6SC.jpg", 10)
-    imageSimilarity.get_knn("./geological_similarity/marble/PSQ1K.jpg", 10)
+    # create inverted index with ANN for searching
+    imageSimilarity.calc_knn_annoy(10)
+
+    # check top 10 neighbors
+    imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
 
 ```
 ## files

@@ -270,7 +270,6 @@ class ImageSimilarity:
         with open(self.inverted_index_file, 'w') as fp:
             json.dump(self.inverted_index, fp)
 
-
     @staticmethod
     def __get_vec(image_path, model):
 
@@ -321,26 +320,28 @@ def main():
     imageSimilarity = ImageSimilarity()
 
     # download train data
-    #imageSimilarity.download_file()
+    imageSimilarity.download_file()
 
     # split data into train and validation
-    #imageSimilarity.split_data()
+    imageSimilarity.split_data()
 
     # train model
-    #imageSimilarity.train()
+    imageSimilarity.train()
 
     # extract embeddings
-    #imageSimilarity.create_all_vec()
+    imageSimilarity.create_all_vec()
 
-    # create inverted index for searching
-    #imageSimilarity.calac_knn(10)
+    # create inverted index with cosine similarities for searching
+    imageSimilarity.calac_knn(10)
 
-    #imageSimilarity.calc_knn_annoy(10)
+    # create inverted index with ANN for searching
+    imageSimilarity.calc_knn_annoy(10)
 
     # check top 10 neighbors
     imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/gneiss/1OK58.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/andesite/0JDL9.jpg", 10)
+∂
 
 if __name__ == '__main__':
     main()
