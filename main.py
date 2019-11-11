@@ -341,7 +341,6 @@ def main():
     imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/gneiss/1OK58.jpg", 10)
     imageSimilarity.get_knn("./geological_similarity/andesite/0JDL9.jpg", 10)
-∂
 
 if __name__ == '__main__':
     main()
