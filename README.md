@@ -6,6 +6,7 @@ The reason why I chose resent50 is that It doesn't hurt performance much, becaus
 
 On top of the trained resnet with imagenet which does not include the original top, I stacked two more layers. One is for feature extraction named embedding. 
 The next is a softmax layer for training new data. And I did not train resnet layers. I only train added two layers. Thus I set the trainable variable of resnet model to False.
+And the named embedding layer use ReLU as a activation function because ReLU is the most prominent one and the de facto standard one.
 
 ```python
 model = Sequential()
@@ -14,10 +15,17 @@ resnet = ResNet50(include_top=False, pooling='avg', weights='imagenet')
 model.add(resnet)
 model.add(Dense(32, activation='relu', name="embedding"))
 model.add(Dense(NUM_CLASSES, activation='softmax'))
-
 model.layers[0].trainable = False
 ```
 
+There are lots of gradient descent optimization algorithms such as Stochastic gradient descent, Adam, RMSprop, etc.
+Some people say that adam is the best. But others say RMSprop is better than the others. However, from my experience, There is no big difference in performance.
+Thus I chose the Stochastic gradient descent.
+
+```python
+sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
+```
 I split all the data into train and validation. In general, train, validation and test dataset are required to estimate model performance or to compare other models   
 However, I don't care about measuring model performance. So I only split the dataset into train and validation.
 
@@ -52,8 +60,10 @@ intermediate_output = model.predict(x)
 ```
 
 Finally, I builded a inverted index; Key is file path and value is a sorted list by cosine similarities.
-The reason why I chose cosine distance instand of euclidean distance is that cosine distance is a better choice in high dimension space, because of curse of dimension.
+The reason why I chose cosine distance instand of euclidean distance is that cosine distance is a better choice in high dimension space, because of curse of dimensionality.
 
+Computing the cosine similarity takes too long according to the number of images because its time complexity is big o of n squared. 
+If I had more time, I would like to apply Approximate Nearest Neighbors Algorithms such as spotify's annoy. 
 
 ```python
 for key in tqdm(self.image_embedding.keys()):
