@@ -78,9 +78,9 @@ for key in tqdm(self.image_embedding.keys()):
 ```
 
 Computing the cosine similarity takes too long in order to calculate all the distance of images because its time complexity is big o of n squared.
-So I also use spotify's annoy to compute nearest neighbors. This Algorithm is one of the popular the Approximate Nearest Neighbors Algorithms.
-Usually, the ANN Algorithms are much faster than general Nearest neighbor search. 
- 
+ So I also implemented spotify’s annoy version to compute nearest neighbors. 
+ This Algorithm is one of the popular the Approximate Nearest Neighbors algorithms. 
+ Usually, the ANN Algorithms are much faster than general Nearest neighbor search because the time complexities is almost constant time.
 
 ```python
 self.annoyIndex = AnnoyIndex(EMBEDDING_SIZE, 'angular')
@@ -138,7 +138,8 @@ def main():
 
     # check top 10 neighbors
     imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
-
+    imageSimilarity.get_knn("./geological_similarity/gneiss/1OK58.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/andesite/0JDL9.jpg", 10)
 ```
 ## files
 - **main.py**
@@ -148,8 +149,10 @@ def main():
 - **embeddings.json**
     - embeddings of all images
 - **inverted-index.json**
-    - inverted index for searching
-## Samples
+    - inverted index for searching   
+    
+## Samples from ANN
 
-![](/images/sample1.png)
-![](/images/sample2.png)
+![](./images/sample1.png)
+![](./images/sample2.png)
+![](./images/sample3.png)
