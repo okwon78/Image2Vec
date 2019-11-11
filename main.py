@@ -21,12 +21,15 @@ from os import listdir
 from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
 from shutil import copyfile
+import random
+
+from annoy import AnnoyIndex
 
 NUM_CLASSES = 6
 IMAGE_RESIZE = 224
 
 NUM_EPOCHS = 100
-
+EMBEDDING_SIZE = 32
 LOSS_METRICS = ['accuracy']
 
 data_url = "http://aws-proserve-data-science.s3.amazonaws.com/geological_similarity.zip"
@@ -49,6 +52,7 @@ class ImageSimilarity:
         self.inverted_index = {}
         self.image_embedding = {}
         self.inverted_index = None
+        self.annoyIndex = None
 
         if not os.path.exists('./working'):
             os.mkdir('./working')
@@ -97,6 +101,8 @@ class ImageSimilarity:
             if not os.path.exists(validation_class_dir):
                 os.mkdir(validation_class_dir)
 
+            random.shuffle(images)
+
             train_data = images[0:split_num]
             train_data = [(os.path.join(self.image_data_path, elem, f), os.path.join(train_class_dir, f)) for f in
                           train_data]
@@ -121,7 +127,7 @@ class ImageSimilarity:
         # resnet.summary()
 
         model.add(resnet)
-        model.add(Dense(32, activation='relu', name="embedding"))
+        model.add(Dense(EMBEDDING_SIZE, activation='relu', name="embedding"))
         model.add(Dense(NUM_CLASSES, activation='softmax'))
         model.layers[0].trainable = False
         model.summary()
@@ -222,7 +228,7 @@ class ImageSimilarity:
                     continue
 
                 target_embedding = self.image_embedding[target]
-                embedding = np.array(embedding).reshape(1, 32)
+                embedding = np.array(embedding).reshape(1, EMBEDDING_SIZE)
                 target_embedding = np.array(target_embedding).reshape(1, len(target_embedding))
                 similarities[target] = cosine_similarity(embedding, target_embedding)[0][0]
 
@@ -230,6 +236,41 @@ class ImageSimilarity:
 
         with open(self.inverted_index_file, 'w') as fp:
             json.dump(self.inverted_index, fp)
+
+    def calc_knn_annoy(self, top_k):
+
+        if not os.path.exists(self.embedding_file):
+            raise Exception("Invalid Operation", f"{self.embedding_file} does not exists")
+
+        with open(self.embedding_file, 'r') as fp:
+            self.image_embedding = json.load(fp)
+
+        self.annoyIndex = AnnoyIndex(EMBEDDING_SIZE, 'angular')
+
+        filenames = {}
+        for idx, key in tqdm(enumerate(self.image_embedding.keys())):
+            self.annoyIndex.add_item(idx, self.image_embedding[key])
+            filenames[idx] = [key, 0]
+
+        self.annoyIndex.build(-1)
+
+        self.inverted_index = {}
+
+        print(len(self.image_embedding))
+        for idx, key in tqdm(enumerate(self.image_embedding.keys())):
+            indexes = self.annoyIndex.get_nns_by_item(idx, top_k)
+
+            values = []
+            for target in indexes:
+                if idx == target:
+                    continue
+                values.append(filenames[target])
+
+            self.inverted_index[key] = values
+
+        with open(self.inverted_index_file, 'w') as fp:
+            json.dump(self.inverted_index, fp)
+
 
     @staticmethod
     def __get_vec(image_path, model):
@@ -254,8 +295,8 @@ class ImageSimilarity:
 
         self.draw_images(filename, neighbors)
 
-        # for neighbor in neighbors:
-        #     print(neighbor)
+        for neighbor in neighbors:
+            print(neighbor)
 
     @staticmethod
     def draw_images(target, images):
@@ -281,23 +322,26 @@ def main():
     imageSimilarity = ImageSimilarity()
 
     # download train data
-    imageSimilarity.download_file()
+    #imageSimilarity.download_file()
 
     # split data into train and validation
-    imageSimilarity.split_data()
+    #imageSimilarity.split_data()
 
     # train model
-    imageSimilarity.train()
+    #imageSimilarity.train()
 
     # extract embeddings
-    imageSimilarity.create_all_vec()
+    #imageSimilarity.create_all_vec()
 
     # create inverted index for searching
-    imageSimilarity.calac_knn(10)
+    #imageSimilarity.calac_knn(10)
+
+    #imageSimilarity.calc_knn_annoy(10)
 
     # check top 10 neighbors
     imageSimilarity.get_knn("./geological_similarity/marble/PDF9R.jpg", 10)
-
+    imageSimilarity.get_knn("./geological_similarity/gneiss/1OK58.jpg", 10)
+    imageSimilarity.get_knn("./geological_similarity/andesite/0JDL9.jpg", 10)
 
 if __name__ == '__main__':
     main()
