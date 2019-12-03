@@ -154,7 +154,7 @@ def main():
 - **inverted-index.json**
     - inverted index for searching   
     
-## Samples from ANN
+## Results using ANN
 
 ![](./images/sample1.png)
 ![](./images/sample2.png)
