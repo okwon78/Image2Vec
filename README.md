@@ -1,4 +1,4 @@
-# Geological Image Similarity
+# Image Similarity
 
 I tried to identify similar images for a given image using CNN.
 Especially, I used pre-trained resent50 because of a lack of time resources.
