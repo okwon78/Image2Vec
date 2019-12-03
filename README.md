@@ -27,7 +27,7 @@ sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(optimizer=sgd, loss='categorical_crossentropy', metrics=['accuracy'])
 ```
 I split all the data into train and validation. In general, train, validation and test dataset are required to estimate model performance or to compare other models   
-However, I don't care about measuring model performance. So I only split the dataset into train and validation.
+However, I don't care about measuring model performance among models. So I only split the dataset into train and validation.
 
 ```python
 cb_checkpointer = ModelCheckpoint(filepath=self.trained_weights_path, monitor='val_loss', save_best_only=True, mode='auto')
